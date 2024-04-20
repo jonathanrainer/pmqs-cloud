@@ -9,7 +9,8 @@ data "google_billing_account" "pmqs_cloud_billing_account" {
 locals {
   enabled_apis = [
     "iamcredentials.googleapis.com",
-    "cloudresourcemanager.googleapis.com"
+    "cloudresourcemanager.googleapis.com",
+    "cloudbilling.googleapis.com"
   ]
 }
 
