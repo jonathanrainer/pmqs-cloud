@@ -1,0 +1,14 @@
+[package]
+name = "humphery"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.2", features = ["derive"] }
+reqwest = "0.12.3"
+chrono = "0.4.37"
+sxd-xpath = "0.4.2"
+sxd-document = "0.3.2"
+log4rs = { workspace = true }
+log = { workspace = true }
+tokio = { version = "1.37.0", features = ["rt", "rt-multi-thread", "macros"] }

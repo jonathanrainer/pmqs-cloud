@@ -1,0 +1,7 @@
+[workspace]
+members = ["humphery"]
+resolver = "2"
+
+[workspace.dependencies]
+log4rs = "1.2.0"
+log = "0.4.20"
