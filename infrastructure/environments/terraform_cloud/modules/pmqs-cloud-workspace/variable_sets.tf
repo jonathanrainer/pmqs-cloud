@@ -1,17 +1,12 @@
 resource "tfe_workspace_variable_set" "gcp_workload_identity_variables" {
   variable_set_id = tfe_variable_set.gcp_workload_identity_federation.id
-  workspace_id    = tfe_workspace.gcp_organisation_structure.id
-}
-
-resource "tfe_workspace_variable_set" "gcp_workload_identity_variables" {
-  variable_set_id = tfe_variable_set.gcp_workload_identity_federation.id
-  workspace_id    = tfe_workspace.production.id
+  workspace_id    = tfe_workspace.workspace.id
 }
 
 resource "tfe_variable_set" "gcp_workload_identity_federation" {
   name         = "GCP Workload Identity Variables"
   description  = "Variables to enable a connection to GCP via WIF"
-  organization = tfe_organization.pmqs_cloud.id
+  organization = var.organization_name
 }
 
 resource "tfe_variable" "gcp_provider_auth" {
