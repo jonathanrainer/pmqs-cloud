@@ -1,16 +1,11 @@
-resource "tfe_organization" "pmqs_cloud" {
-  email = var.owner_email
-  name  = "pmqs-cloud"
-}
-
-resource "tfe_workspace" "gcp_organisation_structure" {
-  name         = "gcp-organisation-structure"
-  organization = tfe_organization.pmqs_cloud.name
+resource "tfe_workspace_variable_set" "gcp_workload_identity_variables" {
+  variable_set_id = tfe_variable_set.gcp_workload_identity_federation.id
+  workspace_id    = tfe_workspace.gcp_organisation_structure.id
 }
 
 resource "tfe_workspace_variable_set" "gcp_workload_identity_variables" {
   variable_set_id = tfe_variable_set.gcp_workload_identity_federation.id
-  workspace_id    = tfe_workspace.gcp_organisation_structure.id
+  workspace_id    = tfe_workspace.production.id
 }
 
 resource "tfe_variable_set" "gcp_workload_identity_federation" {
