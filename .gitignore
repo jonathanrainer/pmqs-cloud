@@ -159,3 +159,4 @@ Temporary Items
 
 # Extras
 .idea
+/infrastructure/**/.terraform.lock.hcl
