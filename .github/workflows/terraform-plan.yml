@@ -51,8 +51,8 @@ jobs:
     steps:
       - name: Calculate Workspace Name
         id: calculate-workspace-name
+        working-directory: ${{ matrix.directory }}
         run: |
-          cd ${{ matrix.directory }}
           terraform init
           echo "workspace_name=$(terraform workspace show)"
 
