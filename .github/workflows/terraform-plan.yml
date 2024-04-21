@@ -14,15 +14,17 @@ env:
   CONFIG_DIRECTORY: "./"
 
 jobs:
-  terraform:
-    name: "Terraform Plan"
+  calculate-plans:
+    name: "Calculate Plans"
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+
+    outputs:
+      directory_matrix: ${{ steps.create-matrix.outputs }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get Changed Files
         uses: tj-actions/changed-files@v44
@@ -31,9 +33,24 @@ jobs:
           write_output_files: true
 
       - name: Reduce Changed Files List To List of Directories
+        id: create-matrix
         run: |
-            ls .github/outputs
-            cat all_changed_and_modified_files.json | jq
+            CHANGED_INFRA_FILES=( $(cat .github/outputs/all_changed_and_modified_files.json | jq '.[] | select(. | startswith("infrastructure/environments"))' | xargs -I {} dirname {} | sort | uniq | tr '\n' ' ') )
+            echo jq -n -c '$ARGS.positional' --args "${MY_ARRAY[@]}" >> "$GITHUB_OUTPUT"
+
+  run-plans:
+    name: "Run Plans"
+    permissions:
+      pull-requests: write
+    strategy:
+      matrix:
+        directory: ${{ fromJSON(jobs.calculate-plans.outputs.directory_matrix) }}
+    runs-on: ubuntu-latest
+    needs: calculate-plans
+    steps:
+      - run: |
+          echo ${{ matrix.directory }}
+
 
 #      - name: Upload Configuration
 #        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
