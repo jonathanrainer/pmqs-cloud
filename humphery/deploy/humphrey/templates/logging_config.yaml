@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "log_config_configmap_name" . }}
+data:
+  {{ .Values.logConfig.configFileName }}: |
+    refresh_rate: 30 seconds
+    appenders:
+      stdout:
+        kind: console
+    loggers:
+      reqwest:
+        level: off
+    root:
+      level: info
+      appenders:
+        - stdout

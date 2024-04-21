@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "application_config_configmap_name" . }}
+data:
+  EARLIEST_DATE_MATCH_DATA: "11-07-1987"
+  EARLIEST_DATE_TELEVISED: "21-11-1989"

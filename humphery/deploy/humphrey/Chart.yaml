@@ -1,0 +1,8 @@
+apiVersion: v2
+name: humphrey
+description: |
+  An application to scan the XML store of Hansard proceedings and extract from it instances of Questions to the 
+  Prime Minister, from the British House of Commons.
+type: application
+version: 0.0.1
+appVersion: "local"

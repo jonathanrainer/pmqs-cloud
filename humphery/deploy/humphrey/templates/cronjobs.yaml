@@ -1,0 +1,42 @@
+{{ $logConfigVolume := "log-config" }}
+
+{{- range .Values.schedules }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: humphrey-{{.name}}
+spec:
+  schedule: {{ .crontab }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: main
+              {{ if $.Values.image.repository | empty }}
+              image: {{ $.Chart.Name }}:{{$.Chart.AppVersion}}
+              {{ else }}
+              image: "{{ $.Values.image.repository }}/{{ $.Chart.Name }}:{{$.Chart.AppVersion}}"
+              {{ end }}
+              imagePullPolicy: IfNotPresent
+              workingDir: /
+              command:
+                - "./humphrey"
+              env:
+                - name: "HUMPHREY_LOG_CONFIG_PATH"
+                  value: {{ template "log_config_file_path" $ }}
+              envFrom:
+                - configMapRef:
+                    name: {{ template "application_config_configmap_name" $ }}
+              args:
+                {{- toYaml .args | nindent 16 }}
+              volumeMounts:
+                - mountPath: {{ $.Values.logConfig.configFolder }}
+                  name: {{ $logConfigVolume }}
+          volumes:
+            - name: {{ $logConfigVolume }}
+              configMap:
+                name: {{ template "log_config_configmap_name" $ }}
+          restartPolicy: OnFailure
+{{- end}}

@@ -1,0 +1,23 @@
+image:
+  repository: ""
+  local: true
+
+logConfig:
+  configMapName: "log-config"
+  configFileName: "log4rs.yml"
+  configFolder: "/config"
+
+applicationConfig:
+  configMapName: "app-config"
+
+schedules:
+  - crontab: "0 10 1 1-12 *"
+    args:
+      - "--start-date"
+      - "$EARLIEST_DATE_MATCH_DATA"
+    name: "full-refresh"
+  - crontab: "0 13 * * 3"
+    args:
+      - "--num-weeks"
+      - "1"
+    name: "weekly"
