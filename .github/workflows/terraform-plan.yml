@@ -21,7 +21,7 @@ jobs:
       contents: read
 
     outputs:
-      directory_matrix: ${{ steps.create-matrix.outputs }}
+      directory_matrix: ${{ steps.create-matrix.outputs.directories }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,8 +35,8 @@ jobs:
       - name: Reduce Changed Files List To List of Directories
         id: create-matrix
         run: |
-            CHANGED_INFRA_FILES=( $(cat .github/outputs/all_changed_and_modified_files.json | jq '.[] | select(. | startswith("infrastructure/environments"))' | xargs -I {} dirname {} | sort | uniq | tr '\n' ' ') )
-            jq -n -c '$ARGS.positional' --args "${MY_ARRAY[@]}" >> "$GITHUB_OUTPUT"
+            CHANGED_INFRA_FILES=( $(cat .github/outputs/all_changed_and_modified_files.json | jq '.[] | select(. | startswith("infrastructure/environments")) | select(. | startswith("infrastructure/environments/terraform_cloud") | not) | select(. | startswith("infrastructure/environments/gcp/foundation") | not)' | xargs -I {} dirname {} | sort | uniq | tr '\n' ' ') )
+            echo "directories=$(jq -n -c '$ARGS.positional' --args "${CHANGED_INFRA_FILES[@]}")" >> "$GITHUB_OUTPUT"
 
   run-plans:
     name: "Run Plans"
@@ -46,66 +46,70 @@ jobs:
       matrix:
         directory: ${{ fromJSON(needs.calculate-plans.outputs.directory_matrix) }}
     runs-on: ubuntu-latest
+    container: { image: hashicorp/terraform }
     needs: calculate-plans
     steps:
-      - run: |
-          echo ${{ matrix.directory }}
+      - name: Calculate Workspace Name
+        id: calculate-workspace-name
+        run: |
+          cd ${{ matrix.directory }}
+          terraform init
+          echo "workspace_name=$(terraform workspace show)"
 
+      - name: Upload Configuration
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        id: plan-upload
+        with:
+          workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
+          directory: ./${{ matrix.directory }}
+          speculative: true
 
-#      - name: Upload Configuration
-#        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
-#        id: plan-upload
-#        with:
-#          workspace: ${{ env.TF_WORKSPACE }}
-#          directory: ${{ env.CONFIG_DIRECTORY }}
-#          speculative: true
-#
-#      - name: Create Plan Run
-#        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
-#        id: plan-run
-#        with:
-#          workspace: ${{ env.TF_WORKSPACE }}
-#          configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
-#          plan_only: true
-#
-#      - name: Get Plan Output
-#        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
-#        id: plan-output
-#        with:
-#          plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
-#
-#      - name: Update PR
-#        uses: actions/github-script@v6
-#        id: plan-comment
-#        with:
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
-#          script: |
-#            // 1. Retrieve existing bot comments for the PR
-#            const { data: comments } = await github.rest.issues.listComments({
-#              owner: context.repo.owner,
-#              repo: context.repo.repo,
-#              issue_number: context.issue.number,
-#            });
-#            const botComment = comments.find(comment => {
-#              return comment.user.type === 'Bot' && comment.body.includes('Terraform Cloud Plan Output')
-#            });
-#            const output = `#### Terraform Cloud Plan Output
-#               \`\`\`
-#               Plan: ${{ steps.plan-output.outputs.add }} to add, ${{ steps.plan-output.outputs.change }} to change, ${{ steps.plan-output.outputs.destroy }} to destroy.
-#               \`\`\`
-#               [Terraform Cloud Plan](${{ steps.plan-run.outputs.run_link }})
-#               `;
-#            // 3. Delete previous comment so PR timeline makes sense
-#            if (botComment) {
-#              github.rest.issues.deleteComment({
-#                owner: context.repo.owner,
-#                repo: context.repo.repo,
-#                comment_id: botComment.id,
-#              });
-#            }
-#            github.rest.issues.createComment({
-#              issue_number: context.issue.number,
-#              owner: context.repo.owner,
-#              repo: context.repo.repo,
-#              body: output
-#            });
+      - name: Create Plan Run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        id: plan-run
+        with:
+          workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
+          configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
+          plan_only: true
+
+      - name: Get Plan Output
+        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
+        id: plan-output
+        with:
+          plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
+
+      - name: Update PR
+        uses: actions/github-script@v6
+        id: plan-comment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // 1. Retrieve existing bot comments for the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(comment => {
+              return comment.user.type === 'Bot' && comment.body.includes('Terraform Cloud Plan Output')
+            });
+            const output = `#### Terraform Cloud Plan Output
+               \`\`\`
+               Plan: ${{ steps.plan-output.outputs.add }} to add, ${{ steps.plan-output.outputs.change }} to change, ${{ steps.plan-output.outputs.destroy }} to destroy.
+               \`\`\`
+               [Terraform Cloud Plan](${{ steps.plan-run.outputs.run_link }})
+               `;
+            // 3. Delete previous comment so PR timeline makes sense
+            if (botComment) {
+              github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+              });
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
