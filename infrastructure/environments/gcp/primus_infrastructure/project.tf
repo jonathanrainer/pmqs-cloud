@@ -7,9 +7,11 @@ data "google_folder" "primus" {
   lookup_organization = true
 }
 
+data "google_client_config" "this" {}
+
 resource "google_project" "pmqs_cloud_foundation" {
   name                = "Primus Infrastructure"
-  project_id          = "primus-infrastructure"
+  project_id          = data.google_client_config.this.project
   billing_account     = data.google_billing_account.pmqs_cloud_billing_account.id
   auto_create_network = false
   folder_id           = data.google_folder.primus.id
