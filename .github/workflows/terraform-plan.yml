@@ -14,48 +14,19 @@ env:
   CONFIG_DIRECTORY: "./"
 
 jobs:
-  calculate-plans:
-    name: "Calculate Plans"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      directory_matrix: ${{ steps.output-list.outputs.directory_matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Get Changed Files
-        uses: tj-actions/changed-files@v44
-        with:
-          write_output_files: true
-          dir_names: true
-          dir_names_exclude_current_dir: true
-          files_ignore: |
-            gcp/foundation/**
-            terraform_cloud/**
-          files: |
-            **/*.tf
-          path: infrastructure/environments
-          matrix: true
-
-      - id: output-list
-        name: Output List Of Changed Directories
-        run: |
-          echo "directory_matrix=$(cat $GITHUB_WORKSPACE/.github/outputs/all_changed_files.json)" >> "$GITHUB_OUTPUT"
-
-
+  calculate-directories:
+    uses: ./.github/workflows/calculate-workspace-directories.yml
   run-plans:
     name: "Run Plans"
     permissions:
       pull-requests: write
     strategy:
       matrix:
-        directory: ${{ fromJSON(needs.calculate-plans.outputs.directory_matrix) }}
+        directory: ${{ fromJSON(needs.calculate-directories.outputs.directory_matrix) }}
     runs-on: ubuntu-latest
     container:
       image: hashicorp/terraform
-    needs: calculate-plans
+    needs: calculate-directories
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -1,0 +1,58 @@
+name: "Terraform Apply"
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  TF_CLOUD_ORGANIZATION: "pmqs-cloud"
+  TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}"
+  TF_TOKEN_app_terraform_io: "${{ secrets.TF_API_TOKEN }}"
+  CONFIG_DIRECTORY: "./"
+
+jobs:
+  calculate-directories:
+    uses: ./.github/workflows/calculate-workspace-directories.yml
+  terraform:
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    needs: calculate-directories
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        directory: ${{ fromJSON(needs.calculate-directories.outputs.directory_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Calculate Workspace Name
+        id: calculate-workspace-name
+        working-directory: "infrastructure/environments/${{ matrix.directory }}"
+        run: |
+          terraform init
+          echo "workspace_name=$(terraform workspace show)" >>  "$GITHUB_OUTPUT"
+
+      - name: Upload Configuration
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        id: plan-upload
+        with:
+          workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
+          directory: "infrastructure/environments/${{ matrix.directory }}"
+          speculative: true
+
+      - name: Create Apply Run
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        id: apply-run
+        with:
+          workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
+          configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
+
+      - name: Apply
+        uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
+        if: fromJSON(steps.apply-run.outputs.payload).data.attributes.actions.IsConfirmable
+        id: apply
+        with:
+          run: ${{ steps.apply-run.outputs.run_id }}
+          comment: "Apply Run from GitHub Actions CI - ${{ steps.calculate-workspace-name.outputs.workspace_name }} - ${{ github.sha }}"
