@@ -1,0 +1,40 @@
+name: "Calculate Changed Terraform Workspace Directories"
+
+on:
+  workflow_call:
+    outputs:
+      directory_matrix:
+        description: "A matrix that can be fed into other steps consisting of one arm per changed Terraform Workspace"
+        value: ${{ jobs.calculate-plans.outputs.directory_matrix }}
+
+jobs:
+  calculate-plans:
+    name: "Calculate Plans"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      directory_matrix: ${{ steps.output-list.outputs.directory_matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Changed Files
+        uses: tj-actions/changed-files@v44
+        with:
+          write_output_files: true
+          dir_names: true
+          dir_names_exclude_current_dir: true
+          files_ignore: |
+            gcp/foundation/**
+            terraform_cloud/**
+          files: |
+            **/*.tf
+          path: infrastructure/environments
+          matrix: true
+
+      - id: output-list
+        name: Output List Of Changed Directories
+        run: |
+          echo "Found changed files: $(cat $GITHUB_WORKSPACE/.github/outputs/all_changed_files.json)"
+          echo "directory_matrix=$(cat $GITHUB_WORKSPACE/.github/outputs/all_changed_files.json)" >> "$GITHUB_OUTPUT"
