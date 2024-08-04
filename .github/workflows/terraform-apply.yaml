@@ -40,7 +40,6 @@ jobs:
         with:
           workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
           directory: "infrastructure/environments/${{ matrix.directory }}"
-          speculative: true
 
       - name: Create Apply Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
