@@ -14,7 +14,7 @@ resource "google_project" "primus_infrastructure" {
   project_id          = data.google_client_config.this.project
   billing_account     = data.google_billing_account.pmqs_cloud_billing_account.id
   auto_create_network = false
-  folder_id           = data.google_folder.primus.name
+  folder_id           = data.google_folder.primus.id
 }
 
 moved {
