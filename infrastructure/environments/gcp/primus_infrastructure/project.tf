@@ -16,8 +16,3 @@ resource "google_project" "primus_infrastructure" {
   auto_create_network = false
   folder_id           = data.google_folder.primus.id
 }
-
-moved {
-  from = google_project.pmqs_cloud_foundation
-  to   = google_project.primus_infrastructure
-}
