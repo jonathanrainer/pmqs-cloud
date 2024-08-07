@@ -10,8 +10,16 @@ data "google_iam_role" "project_deleter" {
   name = "roles/resourcemanager.projectDeleter"
 }
 
+data "google_iam_role" "billing_user" {
+  name = "roles/billing.user"
+}
+
 data "google_iam_role" "billing_viewer" {
   name = "roles/billing.viewer"
+}
+
+data "google_iam_role" "project_billing_manager" {
+  name = "roles/billing.projectManager"
 }
 
 resource "google_service_account" "terraform_service_account" {
@@ -43,4 +51,16 @@ resource "google_organization_iam_binding" "billing_viewer" {
   members = [google_service_account.terraform_service_account.member]
   org_id  = data.google_organization.pmqs_cloud_org.org_id
   role    = data.google_iam_role.billing_viewer.id
+}
+
+resource "google_organization_iam_binding" "billing_user" {
+  members = [google_service_account.terraform_service_account.member]
+  org_id  = data.google_organization.pmqs_cloud_org.org_id
+  role    = data.google_iam_role.billing_user.id
+}
+
+resource "google_organization_iam_binding" "project_billing_manager" {
+  members = [google_service_account.terraform_service_account.member]
+  org_id  = data.google_organization.pmqs_cloud_org.org_id
+  role    = data.google_iam_role.project_billing_manager.id
 }
