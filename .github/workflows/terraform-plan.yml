@@ -15,9 +15,22 @@ env:
 
 jobs:
   calculate-directories:
-    uses: ./.github/workflows/calculate-workspace-directories.yml
+    name: "Work Out Directories To Generate Plans For"
+    runs-on: ubuntu-24.04
+    outputs:
+      directory_matrix: ${{ steps.calculate_directories.outputs.directories }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: "Calculate directories to run plans for"
+        id: calculate_directories
+        working-directory: infrastructure/environments
+        run: |
+          JQ_OUTPUT=$(find . -mindepth 2 -maxdepth 2 -type d -not -path '*/terraform_cloud*' -not -path '*/gcp/foundation' -not -path '*/gcp/modules' | jq -c --raw-input --slurp 'split("\n") | del(..|select(. == ""))')
+          echo "JQ_OUTPUT is $JQ_OUTPUT"
+          echo "directories=$JQ_OUTPUT" >> "$GITHUB_OUTPUT"
   run-plans:
-    name: "Run Plans"
+    name: "Create Saved Plans"
     permissions:
       pull-requests: write
     strategy:
@@ -38,23 +51,23 @@ jobs:
           echo "workspace_name=$(terraform workspace show)" >>  "$GITHUB_OUTPUT"
 
       - name: Upload Configuration
-        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.0.0
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.3.1
         id: plan-upload
         with:
           workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
           directory: "infrastructure/environments/${{ matrix.directory }}"
-          speculative: true
 
       - name: Create Plan Run
-        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.0.0
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.3.1
         id: plan-run
         with:
           workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
           configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
-          plan_only: true
+          save_plan: true
+          message: "Terraform Plan for Workspace ${{ steps.calculate-workspace-name.outputs.workspace_name }} at SHA ${{ github.sha }}"
 
       - name: Get Plan Output
-        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.0.0
+        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.3.1
         id: plan-output
         with:
           plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
