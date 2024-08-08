@@ -59,7 +59,7 @@ jobs:
         id: find-pr-number
         with:
           script: |
-            github.rest.repos.listPullRequestsAssociatedWithCommit({
+            return github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
