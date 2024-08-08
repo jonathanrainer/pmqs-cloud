@@ -16,20 +16,38 @@ env:
 jobs:
   calculate-directories:
     name: "Work Out Directories To Generate Plans For"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       directory_matrix: ${{ steps.calculate_directories.outputs.directories }}
     steps:
-      - name: Checkout
+      - name: Checkout Repo
         uses: actions/checkout@v4
       - name: "Calculate directories to run plans for"
         id: calculate_directories
         working-directory: infrastructure/environments
         run: |
-          JQ_OUTPUT=$(find . -mindepth 2 -maxdepth 2 -type d -not -path '*/terraform_cloud*' -not -path '*/gcp/foundation' -not -path '*/gcp/modules' | jq -c --raw-input --slurp 'split("\n") | del(..|select(. == ""))')
+          JQ_OUTPUT=$(find . -mindepth 2 -maxdepth 2 -type d -not -path '*/terraform_cloud*' -not -path '*/gcp/foundation' | jq -c --raw-input --slurp 'split("\n") | del(..|select(. == ""))')
           echo "JQ_OUTPUT is $JQ_OUTPUT"
           echo "directories=$JQ_OUTPUT" >> "$GITHUB_OUTPUT"
-  run-plans:
+  terraform-fmt:
+    name: "Terraform Format"
+    runs-on: ubuntu-latest
+    container:
+      image: hashicorp/terraform
+    needs: calculate-directories
+    strategy:
+      matrix:
+        directory: ${{ fromJSON(needs.calculate-directories.outputs.directory_matrix) }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Run Terraform Format
+        id: calculate-workspace-name
+        working-directory: "infrastructure/environments/${{ matrix.directory }}"
+        run: |
+          terraform init
+          terraform fmt -check -diff -recursive
+  create-saved-plans:
     name: "Create Saved Plans"
     permissions:
       pull-requests: write
@@ -43,21 +61,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Calculate Workspace Name
+      - name: Find Workspace Name
         id: calculate-workspace-name
         working-directory: "infrastructure/environments/${{ matrix.directory }}"
         run: |
           terraform init
-          terraform fmt -check -diff -recursive
           echo "workspace_name=$(terraform workspace show)" >>  "$GITHUB_OUTPUT"
-
       - name: Upload Configuration
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.3.1
         id: plan-upload
         with:
           workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
           directory: "infrastructure/environments/${{ matrix.directory }}"
-
       - name: Create Plan Run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.3.1
         id: plan-run
@@ -66,13 +81,11 @@ jobs:
           configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
           save_plan: true
           message: "Terraform Plan for Workspace ${{ steps.calculate-workspace-name.outputs.workspace_name }} at SHA ${{ github.event.pull_request.head.sha }}"
-
       - name: Get Plan Output
         uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.3.1
         id: plan-output
         with:
           plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
-
       - name: Update PR
         uses: actions/github-script@v6
         id: plan-comment
@@ -108,3 +121,14 @@ jobs:
               repo: context.repo.repo,
               body: output
             });
+  check-terraform-all-completes:
+    name: Terraform Planned & Validated
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - create-saved-plans
+      - terraform-fmt
+    steps:
+      - run: |
+          exit ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')) && 1 || 0 }}
+        id: check_matrix
