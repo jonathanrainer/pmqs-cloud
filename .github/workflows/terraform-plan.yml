@@ -48,6 +48,7 @@ jobs:
         working-directory: "infrastructure/environments/${{ matrix.directory }}"
         run: |
           terraform init
+          terraform fmt -check -diff -recursive
           echo "workspace_name=$(terraform workspace show)" >>  "$GITHUB_OUTPUT"
 
       - name: Upload Configuration
