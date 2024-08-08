@@ -9,10 +9,22 @@ data "google_folder" "primus" {
 
 data "google_client_config" "this" {}
 
+locals {
+  enabled_apis = [
+    "artifactregistry.googleapis.com"
+  ]
+}
+
 resource "google_project" "primus_infrastructure" {
   name                = "Primus Infrastructure"
   project_id          = data.google_client_config.this.project
   billing_account     = data.google_billing_account.pmqs_cloud_billing_account.id
   auto_create_network = false
   folder_id           = data.google_folder.primus.id
+}
+
+resource "google_project_service" "enabled_apis" {
+  for_each = toset(local.enabled_apis)
+  project  = google_project.primus_infrastructure.id
+  service  = each.value
 }
