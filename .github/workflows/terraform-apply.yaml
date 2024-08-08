@@ -23,8 +23,9 @@ jobs:
         id: calculate_directories
         working-directory: infrastructure/environments
         run: |
-          JSON_OUTPUT=$(find . -type d -mindepth 2 -maxdepth 2 -not -path '*/terraform_cloud*' -not -path '*/gcp/foundation' -not -path '*/gcp/modules' | jq --raw-input --slurp 'split("\n") | del(..|select(. == ""))')
-          echo "directories=$JSON_OUTPUT" >> "$GITHUB_OUTPUT"
+          JQ_OUTPUT=$(find . -mindepth 2 -maxdepth 2 -type d -not -path '*/terraform_cloud*' -not -path '*/gcp/foundation' -not -path '*/gcp/modules' | jq -c --raw-input --slurp 'split("\n") | del(..|select(. == ""))')
+          echo "JQ_OUTPUT is $JQ_OUTPUT"
+          echo "directories=$JQ_OUTPUT" >> "$GITHUB_OUTPUT"
   apply-saved-plans:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
