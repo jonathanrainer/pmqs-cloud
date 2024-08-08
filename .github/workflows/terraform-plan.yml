@@ -64,7 +64,7 @@ jobs:
           workspace: ${{ steps.calculate-workspace-name.outputs.workspace_name }}
           configuration_version: ${{ steps.plan-upload.outputs.configuration_version_id }}
           save_plan: true
-          message: "Terraform Plan for Workspace ${{ steps.calculate-workspace-name.outputs.workspace_name }} at SHA ${{ github.sha }}"
+          message: "Terraform Plan for Workspace ${{ steps.calculate-workspace-name.outputs.workspace_name }} at SHA ${{ github.event.pull_request.head.sha }}"
 
       - name: Get Plan Output
         uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.3.1
