@@ -68,14 +68,14 @@ jobs:
         id: get-runs-from-workspace
         uses: fjogeleit/http-request-action@v1
         with:
-          url: https://app.terraform.io/api/v2/workspaces/${{ fromJSON(steps.get-workspace-id.outputs.response).data.id }}/runs?search%5Bbasic%5D=${{ fromJSON(steps.find-pr-number.outputs.result).0.head.sha }}&filter%5Boperation%5D=save_plan&filter%5Bstatus%5D=planned_and_saved
+          url: https://app.terraform.io/api/v2/workspaces/${{ fromJSON(steps.get-workspace-id.outputs.response).data.id }}/runs?search%5Bbasic%5D=${{ fromJSON(steps.find-pr-number.outputs.result)[0].head.sha }}&filter%5Boperation%5D=save_plan&filter%5Bstatus%5D=planned_and_saved
           method: 'GET'
           bearerToken: ${{ secrets.TF_API_TOKEN.response }}
 
       - name: Apply
         uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.0.0
-        if: fromJSON(steps.get-runs-from-workspace.outputs.response).data.0.attributes.actions.is-confirmable
+        if: fromJSON(steps.get-runs-from-workspace.outputs.response).data[0].attributes.actions.is-confirmable
         id: apply
         with:
-          run: ${{ fromJSON(steps.get-runs-from-workspace.outputs.response).data.0.id }}
+          run: ${{ fromJSON(steps.get-runs-from-workspace.outputs.response).data[0].id }}
           comment: "Apply Run from GitHub Actions CI - ${{ steps.calculate-workspace-name.outputs.workspace_name }} - ${{ github.sha }}"
