@@ -11,7 +11,8 @@ data "google_client_config" "this" {}
 
 locals {
   enabled_apis = [
-    "artifactregistry.googleapis.com"
+    "artifactregistry.googleapis.com",
+    "iam.googleapis.com"
   ]
 }
 
