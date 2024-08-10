@@ -83,13 +83,13 @@ jobs:
           message: "Terraform Plan for Workspace ${{ steps.calculate-workspace-name.outputs.workspace_name }} at SHA ${{ github.event.pull_request.head.sha }}"
       - name: Get Plan Output
         uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.3.1
-        if: ${{ fromJSON(steps.plan-run.outputs.payload).data.attributes.actions.is-confirmable }}
+        if: ${{ steps.plan-run.outputs.run_status == 'planned_and_saved' }}
         id: plan-output
         with:
           plan: ${{ fromJSON(steps.plan-run.outputs.payload).data.relationships.plan.data.id }}
       - name: Update PR
         uses: actions/github-script@v7
-        if: ${{ fromJSON(steps.plan-run.outputs.payload).data.attributes.actions.is-confirmable }}
+        if: ${{ steps.plan-run.outputs.run_status == 'planned_and_saved' }}
         id: plan-comment
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
