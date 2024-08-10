@@ -1,13 +1,27 @@
 [licenses]
 allow = [
-    "MIT",
     "Apache-2.0",
+    "BSD-3-Clause",
+    "ISC",
+    "LicenseRef-ring",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-DFS-2016"
 ]
 confidence-threshold = 0.8
 
+# ring has a rather complicated LICENSE file due to reasons spelled out
+# in said LICENSE file, but is basically OpenSSL for older parts, and ISC
+# for newer parts
+[[licenses.clarify]]
+name = "ring"
+expression = "LicenseRef-ring"
+version = "0.17.8"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
 [bans]
 # Lint level for when multiple versions of the same crate are detected
-multiple-versions = "warn"
+multiple-versions = "allow"
 # Lint level for when a crate version requirement is `*`
 wildcards = "deny"
 

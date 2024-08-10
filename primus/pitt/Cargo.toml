@@ -2,14 +2,15 @@
 name = "pitt"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 clap = { version = "4.5.13", features = ["derive"] }
-reqwest = "0.12.5"
+reqwest = { version = "0.12.5", features = ["rustls-tls"], default-features = false }
 time = { version = "0.3.36", features = ["formatting", "parsing"] }
 sxd-xpath = "0.4.2"
 sxd-document = "0.3.2"
 thiserror = "1.0.63"
-tracing = { workspace =  true, features = ["log"] }
-tokio = { workspace =  true, features = ["rt", "rt-multi-thread", "macros"] }
-tracing-subscriber = { version="0.3.18", features = ["env-filter", "json", "time"] }
+tracing = { workspace = true, features = ["log"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json", "time"] }
