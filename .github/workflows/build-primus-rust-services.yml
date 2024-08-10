@@ -1,0 +1,130 @@
+name: Build Primus Rust Services
+on:
+  push:
+    paths:
+      - 'primus/**'
+      - '.github/workflows/build-primus-rust-services'
+      - 'Cargo.toml'
+      - 'deny.toml'
+      - 'rust-toolchain.toml'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'primus/**'
+      - '.github/workflows/build-primus-rust-services'
+      - 'Cargo.toml'
+      - 'deny.toml'
+      - 'rust-toolchain.toml'
+
+env:
+  GOOGLE_PROJECT: "primus-infrastructure"
+  STONE_DOCKER_REPOSITORY: "us-central1-docker.pkg.dev/primus-infrastructure/stone"
+  WORKLOAD_IDENTITY_PROVIDER: "projects/781801866127/locations/global/workloadIdentityPools/github-actions-pmqs-cloud/providers/github-actions-pmqs-cloud"
+  SERVICE_ACCOUNT: "github-actions-pmqs-cloud@primus-infrastructure.iam.gserviceaccount.com"
+
+jobs:
+  # Create a matrix of all the rust projects in the Primus Folder
+  find_rust_services:
+    runs-on: ubuntu-latest
+    name: Find Rust Services To Build
+    outputs:
+      rust_projects: ${{ toJSON(fromJSON(steps.convert_cargo_toml_to_json.outputs.json-output).workspace.members) }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Convert Cargo.toml to JSON
+        id: convert_cargo_toml_to_json
+        uses: CfirTsabari/actions-toml2json@v1.0.0
+        with:
+          toml-file-path: Cargo.toml
+  # Run code inspections on Rust code (clippy, cargo-deny, rustfmt etc.)
+  run_code_inspections:
+    runs-on: ubuntu-latest
+    name: Run Checks
+    needs: find_rust_services
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/${{ matrix.rust_project }}
+    strategy:
+      matrix:
+        rust_project: ${{ fromJSON(needs.find_rust_services.outputs.rust_projects) }}
+      fail-fast: false
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: "Run clippy"
+        run: |
+          cargo clippy --no-deps -- -D warnings
+      - name: "Run rustfmt"
+        run: |
+          cargo fmt --check
+      - name: "Run cargo-deny"
+        uses: EmbarkStudios/cargo-deny-action@v2.0.1
+  # Iterate over each one and build its associated Dockerfile
+  # Push it to Artifact Registry with correct tags
+  build_docker_images:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    runs-on: ubuntu-latest
+    needs:
+      - run_code_inspections
+      - find_rust_services
+    name: Build Docker Images
+    strategy:
+      matrix:
+        rust_project: ${{ fromJSON(needs.find_rust_services.outputs.rust_projects) }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Read Current Version From Cargo.toml
+        uses: SebRollen/toml-action@v1.2.0
+        id: read_version_from_cargo_toml
+        with:
+          file: ${{ github.workspace }}/${{ matrix.rust_project }}/Cargo.toml
+          field: 'package.version'
+      - name: Calculate Version
+        id: calculate_version
+        working-directory: ${{ github.workspace }}/${{ matrix.rust_project }}
+        run: |
+          VERSION=${{ github.event_name == 'pull_request' && format('{0}-PR{1}.{2}', steps.read_version_from_cargo_toml.outputs.value, github.event.number, github.event.pull_request.head.sha) || steps.read_version_from_cargo_toml.outputs.value}}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Authenticate via Workload Identity Federation
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2.1.1
+        with:
+          project_id: ${{ env.GOOGLE_PROJECT }}
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: us-central1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - name: Get Package Name from Cargo.toml
+        uses: SebRollen/toml-action@v1.2.0
+        id: read_name_from_cargo_toml
+        with:
+          file: ${{ github.workspace }}/${{ matrix.rust_project }}/Cargo.toml
+          field: 'package.name'
+      - name: Check Version Not Already Published
+        id: "check_version_not_published"
+        run: |
+          if gcloud artifacts docker images describe ${{env.STONE_DOCKER_REPOSITORY}}/${{steps.read_name_from_cargo_toml.outputs.value}}:${{steps.read_version_from_cargo_toml.outputs.value}} 2>/dev/null; then
+            echo "The version of '${{steps.read_name_from_cargo_toml.outputs.value}}' you're trying to publish (${{steps.calculate_version.outputs.version}}) has already been published, do you need to bump it?'"
+            exit 1
+          fi
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          file: ${{ github.workspace }}/${{ matrix.rust_project }}/Dockerfile
+          push: true
+          tags: ${{env.STONE_DOCKER_REPOSITORY}}/${{steps.read_name_from_cargo_toml.outputs.value}}:v${{steps.calculate_version.outputs.version}}, ${{env.STONE_DOCKER_REPOSITORY}}/${{steps.read_name_from_cargo_toml.outputs.value}}:${{steps.calculate_version.outputs.version}}
