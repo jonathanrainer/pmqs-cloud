@@ -18,5 +18,5 @@ resource "google_project_iam_binding" "artifact_registry_writer" {
     google_service_account.github_actions_pmqs_cloud.member
   ]
   project = google_project.primus_infrastructure.project_id
-  role    = data.google_iam_role.artifact_registry_writer
+  role    = data.google_iam_role.artifact_registry_writer.name
 }
