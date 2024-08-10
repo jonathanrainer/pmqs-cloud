@@ -1,3 +1,7 @@
+data "google_iam_role" "artifact_registry_writer" {
+  name = "roles/artifactregistry.writer"
+}
+
 resource "google_artifact_registry_repository" "stone" {
   location      = "us-central1"
   repository_id = "stone"
@@ -7,4 +11,12 @@ resource "google_artifact_registry_repository" "stone" {
   docker_config {
     immutable_tags = true
   }
+}
+
+resource "google_project_iam_binding" "artifact_registry_writer" {
+  members = [
+    google_service_account.github_actions_pmqs_cloud.member
+  ]
+  project = google_project.primus_infrastructure.project_id
+  role    = data.google_iam_role.artifact_registry_writer
 }
