@@ -14,7 +14,7 @@ resource "google_iam_workload_identity_pool_provider" "github_actions_pmqs_cloud
   display_name                       = "GitHub Actions (pmqs-cloud)"
   description                        = "Identity Pool Provider for publishing to Artifact Registry from GitHub Actions"
   oidc {
-    issuer_uri = "https://tokens.actions.githubusercontent.com"
+    issuer_uri = "https://token.actions.githubusercontent.com"
   }
   attribute_mapping = {
     "google.subject" : "assertion.sub"
