@@ -1,4 +1,4 @@
-variable "owner_email" {
+variable "email" {
   type      = string
   sensitive = true
 }

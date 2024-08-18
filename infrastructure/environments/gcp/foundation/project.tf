@@ -11,7 +11,8 @@ locals {
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudbilling.googleapis.com",
-    "iam.googleapis.com"
+    "iam.googleapis.com",
+    "billingbudgets.googleapis.com"
   ]
 }
 
@@ -28,26 +29,6 @@ resource "google_project" "pmqs_cloud_foundation" {
 
 resource "google_project_service" "enabled_apis" {
   for_each = toset(local.enabled_apis)
-  project  = google_project.pmqs_cloud_foundation.id
-  service  = each.value
-}
-
-moved {
-  from = module.pmqs_cloud_foundation.google_project.this
-  to   = google_project.pmqs_cloud_foundation
-}
-
-moved {
-  from = module.pmqs_cloud_foundation.google_project_service.enabled_apis["cloudbilling.googleapis.com"]
-  to   = google_project_service.enabled_apis["cloudbilling.googleapis.com"]
-}
-
-moved {
-  from = module.pmqs_cloud_foundation.google_project_service.enabled_apis["cloudresourcemanager.googleapis.com"]
-  to   = google_project_service.enabled_apis["cloudresourcemanager.googleapis.com"]
-}
-
-moved {
-  from = module.pmqs_cloud_foundation.google_project_service.enabled_apis["iamcredentials.googleapis.com"]
-  to   = google_project_service.enabled_apis["iamcredentials.googleapis.com"]
+  project = google_project.pmqs_cloud_foundation.id
+  service = each.value
 }
