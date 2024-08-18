@@ -1,0 +1,17 @@
+name: Build Primus Rust Services
+on:
+  pull_request:
+    paths-ignore:
+      - 'primus/**'
+      - '.github/workflows/build-primus-rust-services'
+      - 'Cargo.toml'
+      - 'deny.toml'
+      - 'rust-toolchain.toml'
+
+jobs:
+  check-builds-all-completes:
+    name: Rust Docker Images Built & Pushed
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "No build required"'

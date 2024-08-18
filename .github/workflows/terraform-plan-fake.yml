@@ -1,0 +1,17 @@
+name: "Terraform Plan"
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.tf'
+      - '!infrastructure/environments/gcp/foundation/**'
+      - '!infrastructure/environments/terraform_cloud/**'
+      - '.github/workflows/terraform-plan.yml'
+
+jobs:
+  check-terraform-all-completes:
+    name: Terraform Planned & Validated
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "No Terraform builds required"'

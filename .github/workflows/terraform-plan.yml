@@ -6,6 +6,7 @@ on:
       - '**.tf'
       - '!infrastructure/environments/gcp/foundation/**'
       - '!infrastructure/environments/terraform_cloud/**'
+      - '.github/terraform-plan.yml'
 
 env:
   TF_CLOUD_ORGANIZATION: "pmqs-cloud"
@@ -32,8 +33,6 @@ jobs:
   terraform-fmt:
     name: "Terraform Format"
     runs-on: ubuntu-latest
-    container:
-      image: hashicorp/terraform
     needs: calculate-directories
     strategy:
       matrix:
@@ -55,8 +54,6 @@ jobs:
       matrix:
         directory: ${{ fromJSON(needs.calculate-directories.outputs.directory_matrix) }}
     runs-on: ubuntu-latest
-    container:
-      image: hashicorp/terraform
     needs: calculate-directories
     steps:
       - name: Checkout
