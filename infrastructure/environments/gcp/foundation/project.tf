@@ -29,6 +29,6 @@ resource "google_project" "pmqs_cloud_foundation" {
 
 resource "google_project_service" "enabled_apis" {
   for_each = toset(local.enabled_apis)
-  project = google_project.pmqs_cloud_foundation.id
-  service = each.value
+  project  = google_project.pmqs_cloud_foundation.id
+  service  = each.value
 }
