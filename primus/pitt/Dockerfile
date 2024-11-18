@@ -1,4 +1,4 @@
-FROM rust:1.80 AS build
+FROM rust:1.82 AS build
 
 # create a new empty shell project
 RUN mkdir /build
