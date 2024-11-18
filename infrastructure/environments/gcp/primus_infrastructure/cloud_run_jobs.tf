@@ -1,6 +1,8 @@
 locals {
   cloudrun_jobs = {
     pitt_weekly = {
+      // IDs here are governed by rules around not have underscores
+      name           = "pitt-weekly"
       docker_image   = "us-central1-docker.pkg.dev/primus-infrastructure/stone/pitt:prod"
       cron_expresion = "0 14 * * 3"
       args = [
@@ -10,6 +12,8 @@ locals {
       description = "A weekly job that looks back over the previous month to capture new PMQs instances"
     },
     pitt_monthly = {
+      // IDs here are governed by rules around not have underscores
+      name           = "pitt-monthly"
       docker_image   = "us-central1-docker.pkg.dev/primus-infrastructure/stone/pitt:prod"
       cron_expresion = "* 2 15 * *"
       args = [
@@ -23,7 +27,7 @@ locals {
 
 resource "google_cloud_run_v2_job" "primus_jobs" {
   for_each = local.cloudrun_jobs
-  name     = each.key
+  name     = each.value.name
   location = "us-central1"
 
   template {
@@ -45,7 +49,7 @@ resource "google_cloud_run_v2_job" "primus_jobs" {
 
 resource "google_cloud_scheduler_job" "primus_scheduler" {
   for_each    = local.cloudrun_jobs
-  name        = each.key
+  name        = each.value.name
   region      = "us-central1"
   description = each.value.description
   schedule    = each.value.cron_expresion
