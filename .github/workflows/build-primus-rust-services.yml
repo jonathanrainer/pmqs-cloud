@@ -122,12 +122,34 @@ jobs:
           fi
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      - name: Get Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        env:
+          DOCKER_METADATA_PR_HEAD_SHA: true
+        with:
+          images: ${{env.STONE_DOCKER_REPOSITORY}}/${{steps.read_name_from_cargo_toml.outputs.value}}
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.calculate_version.outputs.version }}
+            type=semver,pattern={{version}},value=v${{ steps.calculate_version.outputs.version }}
+            type=raw,value=prod,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=${{steps.read_name_from_cargo_toml.outputs.value}}
+            org.opencontainers.image.vendor=PMQs Cloud
+            org.opencontainers.image.licenses=Apache 2.0
+          annotations: |
+            org.opencontainers.image.title=${{ matrix.changed_dir }}
+            org.opencontainers.image.vendor=PMQs Cloud
+            org.opencontainers.image.licenses=Apache 2.0
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
           file: ${{ github.workspace }}/${{ matrix.rust_project }}/Dockerfile
           push: true
-          tags: ${{env.STONE_DOCKER_REPOSITORY}}/${{steps.read_name_from_cargo_toml.outputs.value}}:v${{steps.calculate_version.outputs.version}}, ${{env.STONE_DOCKER_REPOSITORY}}/${{steps.read_name_from_cargo_toml.outputs.value}}:${{steps.calculate_version.outputs.version}}
+          tags: ${{ steps.meta.outputs.tags }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   check-builds-all-completes:
     name: Rust Docker Images Built & Pushed
     if: ${{ always() }}
