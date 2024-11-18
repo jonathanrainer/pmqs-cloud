@@ -59,7 +59,6 @@ resource "google_cloud_scheduler_job" "primus_scheduler" {
   }
 
   depends_on = [
-    google_project_service.enabled_apis["cloudscheduler.googleapis.com"],
-    google_cloud_run_v2_job.primus_jobs[each.key]
+    google_project_service.enabled_apis["cloudscheduler.googleapis.com"]
   ]
 }
