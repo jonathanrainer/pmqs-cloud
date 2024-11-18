@@ -2,6 +2,10 @@ data "google_iam_role" "artifact_registry_writer" {
   name = "roles/artifactregistry.writer"
 }
 
+data "google_iam_role" "artifactregistry_administrator" {
+  name = "roles/artifactregistry.admin"
+}
+
 resource "google_artifact_registry_repository" "stone" {
   location      = "us-central1"
   repository_id = "stone"
@@ -19,4 +23,12 @@ resource "google_project_iam_binding" "artifact_registry_writer" {
   ]
   project = google_project.primus_infrastructure.project_id
   role    = data.google_iam_role.artifact_registry_writer.name
+}
+
+resource "google_project_iam_binding" "artifactregistry_administrator" {
+  members = [
+    "user:jonathan@pmqs.cloud"
+  ]
+  project = google_project.primus_infrastructure.project_id
+  role    = data.google_iam_role.artifactregistry_administrator.name
 }

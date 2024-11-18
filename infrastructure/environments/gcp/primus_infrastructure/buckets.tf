@@ -21,3 +21,15 @@ resource "google_storage_bucket_iam_binding" "pitt_access" {
   ]
   role = data.google_iam_role.storage_object_creator.name
 }
+
+data "google_iam_role" "storage_object_viewer" {
+  name = "roles/storage.objectViewer"
+}
+
+resource "google_storage_bucket_iam_binding" "personal_access" {
+  bucket = google_storage_bucket.raw_events.name
+  members = [
+    "user:jonathan@pmqs.cloud"
+  ]
+  role = data.google_iam_role.storage_object_viewer.name
+}
