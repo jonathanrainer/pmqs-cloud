@@ -1,20 +1,27 @@
 use crate::errors::ScanningError;
+use google_cloud_storage::client::Client;
+use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
+use google_cloud_storage::http::Error;
 use reqwest::StatusCode;
+use serde_json::json;
 use sxd_document::parser;
-use sxd_xpath::{evaluate_xpath, Value};
+use sxd_xpath::evaluate_xpath;
 use time::format_description;
 use time::{Duration, OffsetDateTime};
-use tracing::{debug, info, trace};
+use tracing::{info, trace};
 
 const XML_SOURCE_URL: &str = "https://www.theyworkforyou.com/pwdata/scrapedxml/debates";
+const BUCKET_NAME: &str = "pmqs-raw-events";
 
 pub(crate) async fn run_scan(
     earliest_date: OffsetDateTime,
     dry_run: bool,
+    gcs_client: &Client,
 ) -> Result<(), ScanningError> {
     // Build up a loop to iterate over all the dates between the earliest and today
     let mut date = earliest_date;
     let format = format_description::parse("[year]-[month]-[day]").unwrap();
+    let scan_timestamp = OffsetDateTime::now_utc().unix_timestamp();
     while date <= OffsetDateTime::now_utc() {
         trace!("Scanning date {}...", date.date());
         for letter in 'a'..='z' {
@@ -28,9 +35,29 @@ pub(crate) async fn run_scan(
                     // Parse the XML file
                     if xml_contains_pmqs_instance(&xml) {
                         if dry_run {
-                            debug!("Found PMQs instance on {} at URL {}", date.date(), url);
+                            info!("Found PMQs instance on {} at URL {}", date.date(), url);
                         } else {
-                            info!("Pushing to Pub/Sub")
+                            let key = format!(
+                                "{}/{}-{}-{}.json",
+                                scan_timestamp,
+                                date.day(),
+                                date.month(),
+                                date.year()
+                            );
+                            info!(
+                                "Found PMQs instance on {} - Uploading to GCS at key {}",
+                                date.date(),
+                                key
+                            );
+                            upload_event_to_gcs(
+                                gcs_client,
+                                key,
+                                json!({
+                                    "date": date.date(),
+                                    "xml_link": url
+                                }),
+                            )
+                            .await?
                         }
                     }
                 }
@@ -64,8 +91,28 @@ fn xml_contains_pmqs_instance(xml: &str) -> bool {
         &document,
         "//publicwhip/minor-heading[contains(text(),\"Engagements\")]",
     ) {
-        Ok(Value::Nodeset(nodes)) => nodes.size() > 0,
+        Ok(sxd_xpath::Value::Nodeset(nodes)) => nodes.size() > 0,
         Ok(_) => false,
         Err(_) => false,
     }
+}
+
+async fn upload_event_to_gcs(
+    gcs_client: &Client,
+    key: String,
+    data: serde_json::Value,
+) -> Result<(), Error> {
+    // Upload the file
+    let upload_type = UploadType::Simple(Media::new(key));
+    gcs_client
+        .upload_object(
+            &UploadObjectRequest {
+                bucket: BUCKET_NAME.to_string(),
+                ..Default::default()
+            },
+            data.to_string().into_bytes(),
+            &upload_type,
+        )
+        .await
+        .map(|_| ())
 }

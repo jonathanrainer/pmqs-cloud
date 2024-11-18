@@ -12,7 +12,9 @@ data "google_client_config" "this" {}
 locals {
   enabled_apis = [
     "artifactregistry.googleapis.com",
-    "iam.googleapis.com"
+    "iam.googleapis.com",
+    "run.googleapis.com",
+    "cloudscheduler.googleapis.com"
   ]
 }
 
