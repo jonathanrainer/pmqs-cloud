@@ -41,7 +41,7 @@ pub(crate) async fn run_scan(
                                 "{}/{}-{}-{}.json",
                                 scan_timestamp,
                                 date.day(),
-                                date.month(),
+                                date.month() as u8,
                                 date.year()
                             );
                             info!(
@@ -53,7 +53,7 @@ pub(crate) async fn run_scan(
                                 gcs_client,
                                 key,
                                 json!({
-                                    "date": date.date(),
+                                    "date": date.format(&format)?,
                                     "xml_link": url
                                 }),
                             )

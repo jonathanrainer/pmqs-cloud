@@ -18,7 +18,7 @@ locals {
       cron_expresion = "* 2 15 * *"
       args = [
         "--start-date",
-        "01-11-1989"
+        "1989-11-01"
       ]
       description = "A monthly job that looks back over all time (from when PMQs was first televised) to ensure we have everything"
     }
