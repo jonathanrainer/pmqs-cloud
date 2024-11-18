@@ -3,14 +3,20 @@ locals {
     pitt_weekly = {
       docker_image   = "us-central1-docker.pkg.dev/primus-infrastructure/stone/pitt:prod"
       cron_expresion = "0 14 * * 3"
-      args           = "--num-weeks 4"
-      description    = "A weekly job that looks back over the previous month to capture new PMQs instances"
+      args = [
+        "--num-weeks",
+        "4"
+      ]
+      description = "A weekly job that looks back over the previous month to capture new PMQs instances"
     },
     pitt_monthly = {
       docker_image   = "us-central1-docker.pkg.dev/primus-infrastructure/stone/pitt:prod"
       cron_expresion = "* 2 15 * *"
-      args           = "--start-date 01-11-1989"
-      description    = "A monthly job that looks back over all time (from when PMQs was first televised) to ensure we have everything"
+      args = [
+        "--start-date",
+        "01-11-1989"
+      ]
+      description = "A monthly job that looks back over all time (from when PMQs was first televised) to ensure we have everything"
     }
   }
 }
@@ -25,8 +31,8 @@ resource "google_cloud_run_v2_job" "primus_jobs" {
     template {
       containers {
         name  = "main"
-        image = value.docker_image
-        args  = value.args
+        image = each.value.docker_image
+        args  = each.value.args
       }
       service_account = google_service_account.cloud_run_pitt.email
     }
