@@ -3,6 +3,7 @@ mod scanner;
 
 use crate::errors::PittError;
 use clap::{arg, Args, Parser};
+use google_cloud_storage::client::{Client, ClientConfig};
 use time::{format_description, Duration, OffsetDateTime};
 use tracing::info;
 use tracing::level_filters::LevelFilter;
@@ -50,7 +51,12 @@ async fn main() -> Result<(), PittError> {
         earliest_date.date()
     );
 
-    scanner::run_scan(earliest_date, args.dry_run)
+    info!("Constructing GCS Client Config");
+    let config = ClientConfig::default().with_auth().await?;
+    info!("Constructing GCS Client");
+    let gcs_client = Client::new(config);
+
+    scanner::run_scan(earliest_date, args.dry_run, &gcs_client)
         .await
         .map_err(|e| e.into())
 }
